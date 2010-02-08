@@ -1,11 +1,14 @@
 #!/bin/bash
 
+LNAME=talloc
+LINCLUDE=talloc.h
+
 if [ "$1" = "" ]; then
     echo "Please provide version string, eg: 1.2.0"
     exit 1
 fi
 
-if [ ! -d "lib/talloc" ]; then
+if [ ! -d "lib/${LNAME}" ]; then
     echo "Run this script from the samba base directory."
     exit 1
 fi
@@ -16,32 +19,32 @@ version=$1
 strver=`echo ${version} | tr "." "-"`
 
 # Checkout the release tag
-git branch -f talloc-release-script-${strver} talloc-${strver}
+git branch -f ${LNAME}-release-script-${strver} ${LNAME}-${strver}
 if [ ! "$?" = "0" ];  then
-    echo "Unable to checkout talloc-${strver} release"
+    echo "Unable to checkout ${LNAME}-${strver} release"
     exit 1
 fi
 
 function cleanquit {
     #Clean up
     git checkout $curbranch
-    git branch -d talloc-release-script-${strver}
+    git branch -d ${LNAME}-release-script-${strver}
     exit $1
 }
 
 # NOTE: use cleanquit after this point
-git checkout talloc-release-script-${strver}
+git checkout ${LNAME}-release-script-${strver}
 
 # Test configure agrees with us
-confver=`grep "^AC_INIT" lib/talloc/configure.ac | tr -d "AC_INIT(talloc, " | tr -d ")"`
+confver=`grep "^AC_INIT" lib/${LNAME}/configure.ac | tr -d "AC_INIT(${LNAME}, " | tr -d ")"`
 if [ ! "$confver" = "$version" ]; then
     echo "Wrong version, requested release for ${version}, found ${confver}"
     cleanquit 1
 fi
 
 # Check exports and signatures are up to date
-pushd lib/talloc
-./script/abi_checks.sh talloc talloc.h
+pushd lib/${LNAME}
+./script/abi_checks.sh ${LNAME} ${LINCLUDE}
 abicheck=$?
 popd
 if [ ! "$abicheck" = "0" ]; then
@@ -49,17 +52,17 @@ if [ ! "$abicheck" = "0" ]; then
     cleanquit 1
 fi
 
-git clean -f -x -d lib/talloc
+git clean -f -x -d lib/${LNAME}
 git clean -f -x -d lib/replace
 
 # Now build tarball
-cp -a lib/talloc talloc-${version}
-cp -a lib/replace talloc-${version}/libreplace
-pushd talloc-${version}
+cp -a lib/${LNAME} ${LNAME}-${version}
+cp -a lib/replace ${LNAME}-${version}/libreplace
+pushd ${LNAME}-${version}
 ./autogen.sh
 popd
-tar cvzf talloc-${version}.tar.gz talloc-${version}
-rm -fr talloc-${version}
+tar cvzf ${LNAME}-${version}.tar.gz ${LNAME}-${version}
+rm -fr ${LNAME}-${version}
 
 cleanquit 0
 
